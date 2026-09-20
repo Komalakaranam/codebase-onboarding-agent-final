@@ -1,0 +1,54 @@
+Merge pull request #21 from Komalakaranam/claude/funny-thompson-fvpv0d
+
+Pin torch to a CPU-only build to avoid pulling in CUDA deps
+Pin torch to a CPU-only build to avoid pulling in CUDA deps
+
+torch is a transitive dependency of sentence-transformers. PyPI's
+default Linux wheel bundles the full CUDA/cuDNN/cuBLAS/triton
+toolchain, which is dead weight on a GPU-less host like Render's free
+tier — it just makes the build much slower and larger for no benefit,
+since sentence-transformers here only ever runs on CPU.
+
+Adds --extra-index-url https://download.pytorch.org/whl/cpu (which
+supplements PyPI rather than replacing it, so every other dependency
+still resolves normally) and pins torch==2.3.1+cpu specifically. A
+bare version pin isn't enough — PyPI's CUDA-bundled wheel shares the
+same version number, and pip doesn't reliably prefer one index over
+another for identical versions, so only the exact "+cpu" build
+forces the CPU-only wheel.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WfT6ytJGwCdQCNByD1TTEq
+
+Merge pull request #20 from Komalakaranam/claude/funny-thompson-fvpv0d
+
+Prepare backend for Render deployment
+Prepare backend for Render deployment
+
+- CORS: allow_origins now always includes localhost (dev) plus any
+  origins listed in the new ALLOWED_ORIGINS env var (comma-separated),
+  so a deployed frontend URL (e.g. Vercel) never needs to be
+  hardcoded — it's just set once known.
+- Drop the unused httpx dependency from requirements.txt (never
+  imported anywhere; was added speculatively for a "future use" that
+  never happened).
+- Add backend/.python-version (3.11.9) so Render's Python-native
+  runtime matches what this app was built and tested against.
+- Add backend/scripts/prefetch_model.py: downloads the
+  sentence-transformers model during the build step instead of lazily
+  on the first indexing request. On ephemeral-disk hosts this avoids
+  a live ~90MB Hugging Face download stacking on top of normal
+  cold-start latency for whoever's first request lands after a
+  deploy.
+- Documented ALLOWED_ORIGINS in .env.example.
+
+GROQ_API_KEY and all other config were already environment-variable
+only (via pydantic-settings), with .env correctly gitignored and
+never committed — confirmed, no code change needed there.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WfT6ytJGwCdQCNByD1TTEq
+
+Merge pull request #19 from Komalakaranam/claude/funny-thompson-fvpv0d
+
+Fix eval substring matching and add top-1 accuracy metric

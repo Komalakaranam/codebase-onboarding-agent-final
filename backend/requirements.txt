@@ -1,0 +1,42 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# GitHub repo cloning
+GitPython==3.1.44
+
+# Settings & validation
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# Database (used in later steps)
+sqlalchemy==2.0.36
+
+# AI / RAG
+#
+# torch is a transitive dependency of sentence-transformers, pinned
+# explicitly to a CPU-only build. PyPI's default Linux wheel for torch
+# bundles the full CUDA/cuDNN/cuBLAS/triton toolchain (multiple GB) even
+# though sentence-transformers here only ever runs on CPU — no benefit
+# on a GPU-less host like Render's free tier, just a much slower/larger
+# build. --extra-index-url adds PyTorch's CPU-only wheelhouse alongside
+# PyPI (it does NOT replace PyPI, so every other package below still
+# resolves normally); pinning the exact "+cpu" build, rather than a
+# bare version number, is what actually forces pip to take the CPU
+# wheel — a bare "torch==2.3.1" would still be satisfiable by PyPI's
+# CUDA-bundled wheel of the same version, and pip's resolver doesn't
+# reliably prefer one index over another for identical version numbers.
+# sentence-transformers 3.3.1 only requires torch>=1.11.0, so 2.3.1 is
+# comfortably compatible.
+#
+# If you ever bump this pin, confirm a matching "+cpu" build actually
+# exists at https://download.pytorch.org/whl/cpu/torch/ first — this
+# wasn't reachable to verify live from this environment, so treat it as
+# a smoke test on your first real Render build, not a certainty.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.3.1+cpu
+
+chromadb==0.5.23
+sentence-transformers==3.3.1
+groq==0.13.1
