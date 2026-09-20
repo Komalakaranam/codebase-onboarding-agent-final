@@ -53,3 +53,16 @@ app.include_router(evaluation_router)
 @app.get("/health", response_model=HealthResponse, tags=["system"])
 def health_check() -> HealthResponse:
     return HealthResponse(status="ok", version="0.1.0")
+
+
+@app.get("/debug/cors", tags=["system"])
+def debug_cors():
+    return {
+        "allowed_origins_env_raw": settings.allowed_origins,
+        "extra_origins_parsed": _extra_origins,
+        "configured_allow_origins": [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            *_extra_origins,
+        ],
+    }
