@@ -18,6 +18,12 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.config import settings
+
+
+class RepoTooLargeError(Exception):
+    """Raised when a repo exceeds the configured indexing size guardrails."""
+
 
 @dataclass
 class CodeChunk:
@@ -262,15 +268,33 @@ def parse_repository(repo_root: Path) -> tuple[list[CodeChunk], int]:
     """
     Parse every supported file in a cloned repo.
 
+    Raises RepoTooLargeError, checked incrementally (file count up front,
+    chunk count as we go) so an oversized repo fails fast — before either
+    burning time on files that will just be discarded, or on the far more
+    expensive embedding step that follows this.
+
     Returns:
         (all_chunks, number_of_files_scanned)
     """
     from app.services.github import list_code_files
 
-    all_chunks: list[CodeChunk] = []
     files = list_code_files(repo_root)
+    if len(files) > settings.max_files_to_index:
+        raise RepoTooLargeError(
+            f"This repo has {len(files)} indexable files, over the free-tier "
+            f"limit of {settings.max_files_to_index}. This repo is too large "
+            f"for the free tier — try a smaller one, or point at a subdirectory."
+        )
 
+    all_chunks: list[CodeChunk] = []
     for file_path in files:
         all_chunks.extend(parse_code_file(file_path, repo_root))
+        if len(all_chunks) > settings.max_chunks_to_index:
+            raise RepoTooLargeError(
+                f"This repo produced over {settings.max_chunks_to_index} code "
+                f"chunks (stopped counting partway through, at {file_path}). "
+                f"This repo is too large for the free tier — try a smaller "
+                f"one, or point at a subdirectory."
+            )
 
     return all_chunks, len(files)

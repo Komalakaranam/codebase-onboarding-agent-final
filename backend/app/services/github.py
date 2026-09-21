@@ -114,6 +114,16 @@ def list_code_files(repo_root: Path) -> list[Path]:
             continue
 
         if path.suffix.lower() in settings.supported_extensions:
+            try:
+                # Skip outsized individual files (generated bundles, data
+                # dumps, vendored code that slipped past skip_dirs) — one
+                # huge file can dominate parse+embed time by itself, and
+                # when no functions/classes are found it becomes a single
+                # oversized chunk anyway, which is a poor RAG match.
+                if path.stat().st_size > settings.max_file_size_bytes:
+                    continue
+            except OSError:
+                continue
             files.append(path)
 
     return sorted(files)

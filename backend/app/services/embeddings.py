@@ -29,6 +29,8 @@ vectors when we search in step 4.
 
 from __future__ import annotations
 
+import logging
+import time
 from functools import lru_cache
 
 from sentence_transformers import SentenceTransformer
@@ -36,16 +38,32 @@ from sentence_transformers import SentenceTransformer
 from app.config import settings
 from app.services.parser import CodeChunk
 
+logger = logging.getLogger(__name__)
+
 
 @lru_cache(maxsize=1)
 def get_embedding_model() -> SentenceTransformer:
     """
     Load the embedding model once and reuse it.
 
-    First call downloads ~90 MB from Hugging Face (cached afterward).
-    Keeping a single instance avoids reloading weights on every request.
+    First call downloads ~90 MB from Hugging Face (cached afterward) and
+    constructs the model — the slow path. @lru_cache means this function
+    body only ever runs once per process; every later call returns the
+    same cached instance immediately, without re-entering here. The log
+    line below only fires on that first, slow call — if it appears more
+    than once per running process in your logs, the caching isn't
+    working as intended; if it appears exactly once no matter how many
+    indexing requests you send, it is.
     """
-    return SentenceTransformer(settings.embedding_model_name)
+    start = time.monotonic()
+    model = SentenceTransformer(settings.embedding_model_name)
+    logger.info(
+        "Loaded embedding model %r in %.2fs (first request in this process — "
+        "subsequent requests reuse this instance)",
+        settings.embedding_model_name,
+        time.monotonic() - start,
+    )
+    return model
 
 
 def prepare_embed_text(chunk: CodeChunk) -> str:

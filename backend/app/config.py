@@ -46,6 +46,16 @@ class Settings(BaseSettings):
     # in main.py so local dev keeps working regardless of this setting.
     allowed_origins: str = ""
 
+    # Free-tier time-budget guardrails for indexing. A slow shared CPU (e.g.
+    # Render's free plan) can time out a proxy-fronted request — commonly
+    # around 30s — well before a large repo finishes embedding. These fail
+    # fast with a clear error instead of silently timing out. Defaults are
+    # a conservative starting point; tune them against the /repos/index
+    # timing logs for your actual host's throughput.
+    max_files_to_index: int = 80
+    max_chunks_to_index: int = 400
+    max_file_size_bytes: int = 100_000  # skip individual files over ~100KB
+
     # File extensions we index in step 1
     supported_extensions: tuple[str, ...] = (".py", ".js", ".jsx", ".ts", ".tsx")
 
